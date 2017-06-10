@@ -60,20 +60,27 @@ class TaskTable extends React.Component {
             rows.push(<TaskRow task={task} key={key} onRemoveTask={this.handleRemoveTask} />)
         }
 
-        return (
-            <table className="table">
-                <thead>
-                    <tr>
-                        <th>Task</th>
-                        <th>Time Added</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows}
-                </tbody>
-            </table>
-        );
+        if (rows.length > 0) {
+            return (
+                <table className="table">
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Time Added</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows}
+                    </tbody>
+                </table>
+            );
+        }
+        else {
+            return (
+                <p style={{textAlign: 'center'}}>No tasks have been added. Why don't you add one?</p>
+            );
+        }
     }
 }
 
@@ -117,7 +124,7 @@ class TodoList extends React.Component {
         super(props);
         this.state = {
             taskText: '',
-            tasks: []
+            tasks: null
         };
         this.handleTaskTextChange = this.handleTaskTextChange.bind(this);
         this.handleAddTaskInput = this.handleAddTaskInput.bind(this);
