@@ -15,6 +15,15 @@ const config = {
 firebase.initializeApp(config);
 
 class TaskRow extends React.Component {
+    constructor(props) {
+        super(props);
+        this.handleRemove = this.handleRemove.bind(this);
+    }
+
+    handleRemove() {
+        this.props.onRemoveTask(this.props.task.key);
+    }
+
     render() {
         let date = new Date(this.props.task.timestamp);
         let timeAdded = `${date.toDateString()} ${date.toLocaleTimeString()}`;
@@ -23,7 +32,7 @@ class TaskRow extends React.Component {
                 <td>{this.props.task.task}</td>
                 <td><em>{timeAdded}</em></td>
                 <td>
-                    <a href={'delete/' + this.props.task.key} type="button" className="btn btn-danger btn-xs" aria-label="Remove Task">
+                    <a onClick={this.handleRemove} type="button" className="btn btn-danger btn-xs" aria-label="Remove Task">
                         <span className="glyphicon glyphicon-remove" aria-hidden="true"></span>
                     </a>
                 </td>
@@ -33,13 +42,22 @@ class TaskRow extends React.Component {
 }
 
 class TaskTable extends React.Component {
+    constructor(props) {
+        super(props);
+        this.handleRemoveTask = this.handleRemoveTask.bind(this);
+    }
+
+    handleRemoveTask(taskId) {
+        this.props.onRemoveTask(taskId);
+    }
+
     render() {
         let rows = [];
         let task = {};
         for (let key in this.props.tasks) {
             task = this.props.tasks[key];
             task['key'] = key; // attach "key" to task object
-            rows.push(<TaskRow task={task} key={key} />)
+            rows.push(<TaskRow task={task} key={key} onRemoveTask={this.handleRemoveTask} />)
         }
 
         return (
@@ -103,6 +121,7 @@ class TodoList extends React.Component {
         };
         this.handleTaskTextChange = this.handleTaskTextChange.bind(this);
         this.handleAddTaskInput = this.handleAddTaskInput.bind(this);
+        this.handleRemoveTask = this.handleRemoveTask.bind(this);
         this.loadTasks = this.loadTasks.bind(this);
         this.loadTasks(); // pull tasks from Firebase
     }
@@ -112,6 +131,13 @@ class TodoList extends React.Component {
         tasksRef.on('value', (snapshot) => {
             this.setState({tasks: snapshot.val()});
         });
+    }
+
+    handleRemoveTask(taskId) {
+        let remove = window.confirm('Are you sure you want to remove this task?');
+        if (remove) {
+            firebase.database().ref('tasks/' + taskId).remove();
+        }
     }
 
     handleTaskTextChange(taskText) {
@@ -132,15 +158,18 @@ class TodoList extends React.Component {
                 <div className="row">
                     <div className="col-md-6 col-md-offset-3">
                         <div className="panel panel-default">
-                          <div className="panel-heading">Todo List</div>
-                          <div className="panel-body">
-                            <AddTaskForm
-                                onAddTaskInput={this.handleAddTaskInput} 
-                                onTaskTextChange={this.handleTaskTextChange}
-                                taskText={this.state.taskText}
+                            <div className="panel-heading">Todo List</div>
+                            <div className="panel-body">
+                                <AddTaskForm
+                                    onAddTaskInput={this.handleAddTaskInput} 
+                                    onTaskTextChange={this.handleTaskTextChange}
+                                    taskText={this.state.taskText}
+                                />
+                            </div>
+                            <TaskTable
+                                tasks={this.state.tasks}
+                                onRemoveTask={this.handleRemoveTask}
                             />
-                          </div>
-                          <TaskTable tasks={this.state.tasks} />
                         </div>
                     </div>
                 </div>
