@@ -1,22 +1,29 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import * as firebase from 'firebase';
 import './index.css';
 
-const tasks = [
-    { id: 1, task: 'Pick up books', timeAdded: 1497048366 },
-    { id: 2, task: 'Go to church', timeAdded: 1497048366 },
-    { id: 3, task: 'Go to the gym', timeAdded: 1497048366 },
-];
+// Initialize Firebase
+const config = {
+    apiKey: "AIzaSyCoV3YtLEIzmjVI0wVH6yNzDFGrECL6ccQ",
+    authDomain: "ncoa-brain-train.firebaseapp.com",
+    databaseURL: "https://ncoa-brain-train.firebaseio.com",
+    projectId: "ncoa-brain-train",
+    storageBucket: "ncoa-brain-train.appspot.com",
+    messagingSenderId: "185045133324"
+};
+firebase.initializeApp(config);
 
 class TaskRow extends React.Component {
     render() {
+        let date = new Date(this.props.task.timestamp);
+        let timeAdded = `${date.toDateString()} ${date.toLocaleTimeString()}`;
         return (
             <tr>
-                <td>{this.props.task.id}</td>
                 <td>{this.props.task.task}</td>
-                <td><em>{this.props.task.timeAdded}</em></td>
+                <td><em>{timeAdded}</em></td>
                 <td>
-                    <a href={'delete/' + this.props.task.id} type="button" className="btn btn-danger btn-xs" aria-label="Remove Task">
+                    <a href={'delete/' + this.props.task.key} type="button" className="btn btn-danger btn-xs" aria-label="Remove Task">
                         <span className="glyphicon glyphicon-remove" aria-hidden="true"></span>
                     </a>
                 </td>
@@ -28,17 +35,19 @@ class TaskRow extends React.Component {
 class TaskTable extends React.Component {
     render() {
         let rows = [];
-        this.props.tasks.forEach(function(task) {
-            rows.push(<TaskRow task={task} key={task.id} />)
-        });
+        let task = {};
+        for (let key in this.props.tasks) {
+            task = this.props.tasks[key];
+            task['key'] = key; // attach "key" to task object
+            rows.push(<TaskRow task={task} key={key} />)
+        }
 
         return (
             <table className="table">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Task</th>
-                        <th>Time added</th>
+                        <th>Time Added</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -51,12 +60,28 @@ class TaskTable extends React.Component {
 }
 
 class AddTaskForm extends React.Component {
+    constructor(props) {
+        super(props);
+        this.handleChange = this.handleChange.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    handleChange(e) {
+        this.props.onTaskTextChange(e.target.value);
+    }
+
+    handleSubmit(e) {
+        this.props.onAddTaskInput();
+        e.preventDefault();
+    }
+
     render() {
         return (
-            <form action="#" className="form-horizontal">
+            <form onSubmit={this.handleSubmit} className="form-horizontal">
                 <div className="col-md-9">
                     <div className="form-group">
-                        <input type="text" className="form-control" id="new-task" placeholder="Enter a new task..." />
+                        <input type="text" className="form-control" id="new-task" 
+                        placeholder="Enter a new task..." value={this.props.taskText} onChange={this.handleChange} />
                     </div>
                 </div>
                 <div className="col-md-2 col-md-offset-1">
@@ -70,6 +95,37 @@ class AddTaskForm extends React.Component {
 }
 
 class TodoList extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            taskText: '',
+            tasks: []
+        };
+        this.handleTaskTextChange = this.handleTaskTextChange.bind(this);
+        this.handleAddTaskInput = this.handleAddTaskInput.bind(this);
+        this.loadTasks = this.loadTasks.bind(this);
+        this.loadTasks(); // pull tasks from Firebase
+    }
+
+    loadTasks() {
+        let tasksRef = firebase.database().ref('tasks');
+        tasksRef.on('value', (snapshot) => {
+            this.setState({tasks: snapshot.val()});
+        });
+    }
+
+    handleTaskTextChange(taskText) {
+        this.setState({taskText});
+    }
+
+    handleAddTaskInput() {
+        firebase.database().ref('tasks').push().set({
+            task: this.state.taskText,
+            timestamp: Date.now()
+        });
+        this.setState({taskText: ''});
+    }
+
     render() {
         return (
             <div className="container">
@@ -78,9 +134,13 @@ class TodoList extends React.Component {
                         <div className="panel panel-default">
                           <div className="panel-heading">Todo List</div>
                           <div className="panel-body">
-                            <AddTaskForm />
+                            <AddTaskForm
+                                onAddTaskInput={this.handleAddTaskInput} 
+                                onTaskTextChange={this.handleTaskTextChange}
+                                taskText={this.state.taskText}
+                            />
                           </div>
-                          <TaskTable tasks={this.props.tasks} />
+                          <TaskTable tasks={this.state.tasks} />
                         </div>
                     </div>
                 </div>
@@ -90,6 +150,6 @@ class TodoList extends React.Component {
 }
 
 ReactDOM.render(
-    <TodoList tasks={tasks} />,
+    <TodoList />,
     document.getElementById('root')
 );
